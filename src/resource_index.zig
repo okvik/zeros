@@ -110,6 +110,7 @@ pub const ResourceOpts = struct {
     data: bool = false,
     all: bool = false,
 };
+
 // Gets a resource of a given type.
 // The options argument determines which fields of a returned Resource struct will be populated.
 pub fn get(allocator: std.mem.Allocator, resource_type: []const u8, resource_name: []const u8, opts: ResourceOpts) !Resource {
@@ -172,7 +173,6 @@ test get {
     }
 }
 
-// TODO: A better, less wasteful, representation.
 pub const Resources = struct {
     map: std.StringHashMap(Resource),
     allocator: std.mem.Allocator,
@@ -195,7 +195,6 @@ pub const Resources = struct {
 };
 
 // Returns a map of all resources of a given type found in the search path.
-// The returned Resource structs have their name and prefix fields set.
 pub fn getAll(allocator: std.mem.Allocator, resource_type: []const u8, opts: ResourceOpts) !Resources {
     if (resource_type.len == 0)
         return Error.ResourceTypeInvalid;
@@ -287,7 +286,8 @@ pub fn getAllPackages(allocator: std.mem.Allocator) !Resources {
     return getAll(allocator, "packages", .{ .prefix = true });
 }
 
-// Returns the share directory of a package. Caller owns the returned slice.
+// Returns absolute path to a directory belonging to a given package.
+// Caller owns the returned slice.
 pub fn getPackageDir(allocator: std.mem.Allocator, package_name: []const u8, dir: []const u8) ![]u8 {
     var package = try get(allocator, "packages", package_name, .{ .prefix = true });
     defer package.deinit();

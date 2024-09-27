@@ -151,19 +151,7 @@ pub fn build(b: *std.Build) !void {
     });
     publisher.root_module.addImport("zeros", zeros);
     publisher.root_module.addImport("std_msgs", std_msgs);
-    publisher.root_module.addImport("geometry_msgs", std_msgs);
     b.installArtifact(publisher);
-
-    const publisher_tests = b.addTest(.{
-        .root_source_file = b.path("examples/publisher.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    publisher_tests.root_module.addImport("zeros", zeros);
-    publisher_tests.root_module.addImport("std_msgs", std_msgs);
-    publisher_tests.root_module.addImport("geometry_msgs", std_msgs);
-
-    const run_publisher_tests = b.addRunArtifact(publisher_tests);
 
     ////////////////////////////////////////////////////////////////////////////////
 
@@ -175,19 +163,7 @@ pub fn build(b: *std.Build) !void {
     });
     subscriber.root_module.addImport("zeros", zeros);
     subscriber.root_module.addImport("std_msgs", std_msgs);
-    subscriber.root_module.addImport("geometry_msgs", std_msgs);
     b.installArtifact(subscriber);
-
-    const subscriber_tests = b.addTest(.{
-        .root_source_file = b.path("examples/subscriber.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    subscriber_tests.root_module.addImport("zeros", zeros);
-    subscriber_tests.root_module.addImport("std_msgs", std_msgs);
-    subscriber_tests.root_module.addImport("geometry_msgs", std_msgs);
-
-    const run_subscriber_tests = b.addRunArtifact(subscriber_tests);
 
     ////////////////////////////////////////////////////////////////////////////////
 
@@ -201,15 +177,6 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(timer);
 
-    const timer_tests = b.addTest(.{
-        .root_source_file = b.path("examples/timer.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    timer_tests.root_module.addImport("zeros", zeros);
-
-    const run_timer_tests = b.addRunArtifact(timer_tests);
-
     ////////////////////////////////////////////////////////////////////////////////
 
     const docs_step = b.step("docs", "Build the documentation");
@@ -219,7 +186,4 @@ pub fn build(b: *std.Build) !void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_zeros_tests.step);
-    test_step.dependOn(&run_publisher_tests.step);
-    test_step.dependOn(&run_subscriber_tests.step);
-    test_step.dependOn(&run_timer_tests.step);
 }

@@ -82,7 +82,7 @@ test parseSearchPath {
 pub const Resource = struct {
     name: ?[]const u8 = null,
     prefix: ?[]const u8 = null,
-    data: ?[]const u8 = null,
+    content: ?[]const u8 = null,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) Resource {
@@ -98,7 +98,7 @@ pub const Resource = struct {
         if (self.prefix) |p| {
             self.allocator.free(p);
         }
-        if (self.data) |p| {
+        if (self.content) |p| {
             self.allocator.free(p);
         }
     }
@@ -141,10 +141,10 @@ pub fn get(allocator: std.mem.Allocator, resource_type: []const u8, resource_nam
             errdefer allocator.free(resource.prefix.?);
         }
         if (opts.all or opts.data) {
-            resource.data = try std.fs.cwd().readFileAlloc(allocator,
+            resource.content = try std.fs.cwd().readFileAlloc(allocator,
                                                            resource_path,
                                                            std.math.maxInt(usize));
-            errdefer allocator.free(resource.data.?);
+            errdefer allocator.free(resource.content.?);
         }
 
         return resource;
@@ -158,14 +158,14 @@ test get {
         defer resource.deinit();
         try std.testing.expectEqual(resource.name, null);
         try std.testing.expectEqual(resource.prefix, null);
-        try std.testing.expectEqual(resource.data, null);
+        try std.testing.expectEqual(resource.content, null);
     }
     {
         var resource = try get(std.testing.allocator, "packages", "rcl", .{ .all = true });
         defer resource.deinit();
         try std.testing.expectEqualStrings(resource.name.?, "rcl");
         try std.testing.expect(resource.prefix.?.len > 0);
-        try std.testing.expect(resource.data.?.len == 0);
+        try std.testing.expect(resource.content.?.len == 0);
     }
     {
         const err = get(std.testing.allocator, "packages", "std_nope", .{});
@@ -244,8 +244,8 @@ pub fn getAll(allocator: std.mem.Allocator, resource_type: []const u8, opts: Res
                 errdefer allocator.free(resource.prefix.?);
             }
             if (opts.all or opts.data) {
-                resource.data = try dir.readFileAlloc(allocator, name, std.math.maxInt(usize));
-                errdefer allocator.free(resource.data.?);
+                resource.content = try dir.readFileAlloc(allocator, name, std.math.maxInt(usize));
+                errdefer allocator.free(resource.content.?);
             }
 
             entry.value_ptr.* = resource;
@@ -274,7 +274,7 @@ test getAll {
         try std.testing.expect(resource.name != null);
         try std.testing.expectEqualStrings(resource.name.?, "rcl");
         try std.testing.expect(resource.prefix != null);
-        try std.testing.expect(resource.data != null);
+        try std.testing.expect(resource.content != null);
     }
     {
         const err = getAll(std.testing.allocator, "nope", .{ .all = true });

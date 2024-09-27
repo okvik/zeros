@@ -84,7 +84,7 @@ pub const Resource = struct {
     name: ?[]const u8 = null,
     prefix: ?[]const u8 = null,
     content: ?[]const u8 = null,
-    allocator: std.mem.Allocator,
+    allocator: ?std.mem.Allocator = null,
 
     pub fn init(allocator: std.mem.Allocator) Resource {
         return .{
@@ -93,14 +93,18 @@ pub const Resource = struct {
     }
 
     pub fn deinit(self: *Resource) void {
+        if (self.allocator == null)
+            @panic("deinit called on a Resource without an allocator");
+
+        const allocator = self.allocator.?;
         if (self.name) |p| {
-            self.allocator.free(p);
+            allocator.free(p);
         }
         if (self.prefix) |p| {
-            self.allocator.free(p);
+            allocator.free(p);
         }
         if (self.content) |p| {
-            self.allocator.free(p);
+            allocator.free(p);
         }
     }
 };
@@ -332,7 +336,6 @@ pub fn registerPackage(allocator: std.mem.Allocator, prefix: []const u8, name: [
     try registerResource(allocator, "packages", &.{
         .prefix = prefix,
         .name = name,
-        .allocator = allocator, // not used
     });
 }
 

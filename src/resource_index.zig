@@ -84,19 +84,8 @@ pub const Resource = struct {
     name: ?[]const u8 = null,
     prefix: ?[]const u8 = null,
     content: ?[]const u8 = null,
-    allocator: ?std.mem.Allocator = null,
 
-    pub fn init(allocator: std.mem.Allocator) Resource {
-        return .{
-            .allocator = allocator,
-        };
-    }
-
-    pub fn deinit(self: *Resource) void {
-        if (self.allocator == null)
-            @panic("deinit called on a Resource without an allocator");
-
-        const allocator = self.allocator.?;
+    pub fn deinit(self: *Resource, allocator: std.mem.Allocator) void {
         if (self.name) |p| {
             allocator.free(p);
         }
@@ -136,7 +125,7 @@ pub fn get(allocator: std.mem.Allocator, resource_type: []const u8, resource_nam
         _ = std.fs.cwd().statFile(resource_path) catch
             continue;
 
-        var resource = Resource.init(allocator);
+        var resource = Resource{};
         if (opts.all or opts.name) {
             resource.name = try allocator.dupe(u8, resource_name);
             errdefer allocator.free(resource.name.?);
@@ -160,14 +149,14 @@ pub fn get(allocator: std.mem.Allocator, resource_type: []const u8, resource_nam
 test get {
     {
         var resource = try get(std.testing.allocator, "packages", "rcl", .{});
-        defer resource.deinit();
+        defer resource.deinit(std.testing.allocator);
         try std.testing.expectEqual(resource.name, null);
         try std.testing.expectEqual(resource.prefix, null);
         try std.testing.expectEqual(resource.content, null);
     }
     {
         var resource = try get(std.testing.allocator, "packages", "rcl", .{ .all = true });
-        defer resource.deinit();
+        defer resource.deinit(std.testing.allocator);
         try std.testing.expectEqualStrings(resource.name.?, "rcl");
         try std.testing.expect(resource.prefix.?.len > 0);
         try std.testing.expect(resource.content.?.len == 0);
@@ -179,12 +168,12 @@ test get {
 }
 
 pub const Resources = struct {
-    map: std.StringHashMap(Resource),
+    map: std.StringHashMapUnmanaged(Resource),
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) Resources {
         return .{
-            .map = std.StringHashMap(Resource).init(allocator),
+            .map = std.StringHashMapUnmanaged(Resource).empty,
             .allocator = allocator,
         };
     }
@@ -193,9 +182,9 @@ pub const Resources = struct {
         var iter = self.map.iterator();
         while (iter.next()) |entry| {
             self.allocator.free(entry.key_ptr.*);
-            entry.value_ptr.deinit();
+            entry.value_ptr.deinit(self.allocator);
         }
-        self.map.deinit();
+        self.map.deinit(self.allocator);
     }
 };
 
@@ -234,12 +223,12 @@ pub fn getAll(allocator: std.mem.Allocator, resource_type: []const u8, opts: Res
 
             const name = try allocator.dupe(u8, dentry.name);
 
-            const entry = try resources.map.getOrPut(name);
+            const entry = try resources.map.getOrPut(allocator, name);
             if (entry.found_existing) {
                 continue;
             }
 
-            var resource = Resource.init(allocator);
+            var resource = Resource{};
             if (opts.all or opts.name) {
                 resource.name = try allocator.dupe(u8, name);
                 errdefer allocator.free(resource.name.?);
@@ -295,7 +284,7 @@ pub fn getAllPackages(allocator: std.mem.Allocator) !Resources {
 // Caller owns the returned slice.
 pub fn getPackageDir(allocator: std.mem.Allocator, package_name: []const u8, dir: []const u8) ![]u8 {
     var package = try get(allocator, "packages", package_name, .{ .prefix = true });
-    defer package.deinit();
+    defer package.deinit(allocator);
 
     return try std.fmt.allocPrint(allocator, "{s}/{s}/{s}", .{package.prefix.?, dir, package_name});
 }

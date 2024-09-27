@@ -13,6 +13,7 @@ pub const Error = error {
 
     ResourceTypeInvalid,
     ResourceNameInvalid,
+    ResourcePrefixInvalid,
 
     ResourceNotFound,
 };
@@ -299,4 +300,50 @@ test getPackageDir {
     const share = try getPackageDir(std.testing.allocator, "rcl", "share");
     defer std.testing.allocator.free(share);
     try std.testing.expect(std.mem.endsWith(u8, share, "/share/rcl"));
+}
+
+// Registers a resource of a given type, named .name, under .prefix, containing .content.
+pub fn registerResource(allocator: std.mem.Allocator, resource_type: []const u8, resource: *const Resource) !void {
+    if (resource_type.len == 0)
+        return Error.ResourceTypeInvalid;
+    if (resource.prefix == null)
+        return Error.ResourcePrefixInvalid;
+    if (resource.name == null)
+        return Error.ResourceNameInvalid;
+
+    const resource_dir = try std.fmt.allocPrint(allocator,
+                                                 "{s}/share/ament_index/resource_index/{s}",
+                                                 .{resource.prefix.?, resource_type});
+    defer allocator.free(resource_dir);
+
+    var dir = try std.fs.cwd().makeOpenPath(resource_dir, .{});
+    defer dir.close();
+
+    const file = try dir.createFile(resource.name.?, .{ .truncate = true });
+    defer file.close();
+
+    if (resource.content) |content| {
+        try file.writeAll(content);
+    }
+}
+
+// Register a package resource
+pub fn registerPackage(allocator: std.mem.Allocator, prefix: []const u8, name: []const u8) !void {
+    try registerResource(allocator, "packages", &.{
+        .prefix = prefix,
+        .name = name,
+        .allocator = allocator, // not used
+    });
+}
+
+test registerPackage {
+    var tmpdir = std.testing.tmpDir(.{});
+    defer tmpdir.cleanup();
+
+    const prefix = try tmpdir.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(prefix);
+
+    try registerPackage(std.testing.allocator, prefix, "zeros");
+
+    try tmpdir.dir.access("share/ament_index/resource_index/packages/zeros", .{});
 }

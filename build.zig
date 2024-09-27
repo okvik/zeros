@@ -93,8 +93,21 @@ pub fn build(b: *std.Build) !void {
     });
     try linkRos(arena, zeros, ros, rmw);
 
+    const zeros_docs = b.addStaticLibrary(.{
+        .name = "zeros",
+        .root_source_file = zeros.root_source_file.?,
+        .target = target,
+        .optimize = optimize,
+    });
+
+    var install_docs = b.addInstallDirectory(.{
+        .source_dir = zeros_docs.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
     const zeros_tests = b.addTest(.{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = zeros.root_source_file.?,
         .target = target,
         .optimize = optimize,
     });
@@ -196,6 +209,11 @@ pub fn build(b: *std.Build) !void {
     timer_tests.root_module.addImport("zeros", zeros);
 
     const run_timer_tests = b.addRunArtifact(timer_tests);
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+    const docs_step = b.step("docs", "Build the documentation");
+    docs_step.dependOn(&install_docs.step);
 
     ////////////////////////////////////////////////////////////////////////////////
 

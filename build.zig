@@ -37,7 +37,9 @@ fn linkRosDependency(arena: std.mem.Allocator, module: *std.Build.Module, name: 
             const library_path = try std.fmt.allocPrint(arena, "{s}/lib/{s}", .{ prefix, name });
             module.addLibraryPath(.{ .cwd_relative = library_path });
 
-            module.linkSystemLibrary(name, .{});
+            module.linkSystemLibrary(name, .{
+                .use_pkg_config = .no,
+            });
         }
     }
 }

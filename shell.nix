@@ -15,6 +15,7 @@ pkgs.mkShell {
         rclc-examples
         rclc
         std-msgs
+        geometry-msgs
         actionlib-msgs
         action-msgs
         unique-identifier-msgs

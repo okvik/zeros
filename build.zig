@@ -12,67 +12,64 @@ const Rmw = enum {
     rmw_cyclonedds_cpp,
 };
 
-fn linkRosDependency(arena: std.mem.Allocator, module: *std.Build.Module, name: []const u8, header_only: bool) !void {
-    module.link_libc = true;
+// Adds the include search path of a given ROS package to the module.
+fn addRosIncludePath(arena: std.mem.Allocator, module: *std.Build.Module, package: []const u8) !void {
+    const resource = try resource_index.get(arena, "packages", package, .{ .prefix = true });
+    const prefix = resource.prefix.?;
 
-    const ament_prefix_path = brk: {
-        if (std.posix.getenv("AMENT_PREFIX_PATH")) |path| {
-            break :brk path;
-        } else {
-            std.log.err("AMENT_PREFIX_PATH unset", .{});
-            return error.AmentPrefixPathUnset;
-        }
-    };
+    const include_path = try std.fmt.allocPrint(arena, "{s}/include/{s}", .{ prefix, package });
+    module.addIncludePath(.{ .cwd_relative = include_path });
+}
 
-    // Split the path and search for the library `name`, adding the include
-    // and library paths to the compile step.
-    var iter = std.mem.splitScalar(u8, ament_prefix_path, ':');
-    while (iter.next()) |prefix| {
-        const include_path = try std.fmt.allocPrint(arena, "{s}/include/{s}", .{ prefix, name });
-        module.addIncludePath(.{ .cwd_relative = include_path });
-
-        if (!header_only) {
-            const common_library_path = try std.fmt.allocPrint(arena, "{s}/lib", .{prefix});
-            module.addLibraryPath(.{ .cwd_relative = common_library_path });
-            const library_path = try std.fmt.allocPrint(arena, "{s}/lib/{s}", .{ prefix, name });
-            module.addLibraryPath(.{ .cwd_relative = library_path });
-
-            module.linkSystemLibrary(name, .{
-                .use_pkg_config = .no,
-            });
-        }
+// Adds library search paths from the ROS prefix to the module.
+fn addRosCommonLibraryPaths(arena: std.mem.Allocator, module: *std.Build.Module) !void {
+    const prefix = try resource_index.getSearchPaths(arena);
+    for (prefix.items) |path| {
+        const library_path = try std.fmt.allocPrint(arena, "{s}/lib", .{path});
+        module.addLibraryPath(.{ .cwd_relative = library_path });
     }
 }
 
-fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, ros: Ros, _: Rmw) !void {
-    // try linkRosDependency(arena, step, @tagName(rmw), false);
-    try linkRosDependency(arena, module, "rmw_cyclonedds_cpp", false);
-    // try linkRosDependency(arena, module, "rmw_fastrtps_cpp", false);
+fn linkRosLibrary(module: *std.Build.Module, library: []const u8) !void {
+    module.link_libc = true;
+    module.linkSystemLibrary(library, .{
+        .use_pkg_config = .no,
+        .preferred_link_mode = .dynamic, // not preffered but neccessary for now
+    });
+}
 
-    try linkRosDependency(arena, module, "rcutils", false);
-    try linkRosDependency(arena, module, "rmw", false);
-    try linkRosDependency(arena, module, "rcl", false);
-    try linkRosDependency(arena, module, "rcl_action", false);
-    try linkRosDependency(arena, module, "rcl_yaml_param_parser", false);
-    try linkRosDependency(arena, module, "rclc", false);
-    try linkRosDependency(arena, module, "rosidl_runtime_c", false);
-    try linkRosDependency(arena, module, "rosidl_typesupport_interface", true);
-    try linkRosDependency(arena, module, "rosidl_typesupport_c", false);
+fn addRosMessageLibrary(arena: std.mem.Allocator, module: *std.Build.Module, package: []const u8) !void {
+    try addRosIncludePath(arena, module, package);
+    try addRosIncludePath(arena, module, "rosidl_runtime_c");
+    try addRosIncludePath(arena, module, "rosidl_typesupport_interface");
 
-    try linkRosDependency(arena, module, "std_msgs", true);
-    try linkRosDependency(arena, module, "std_msgs__rosidl_generator_c", false);
-    try linkRosDependency(arena, module, "std_msgs__rosidl_typesupport_c", false);
+    const typesupport_lib = try std.fmt.allocPrint(arena, "{s}__rosidl_typesupport_c", .{package});
+    const generator_lib = try std.fmt.allocPrint(arena, "{s}__rosidl_generator_c", .{package});
 
-    try linkRosDependency(arena, module, "rcl_interfaces", true);
-    try linkRosDependency(arena, module, "actionlib_msgs", true);
-    try linkRosDependency(arena, module, "action_msgs", true);
-    try linkRosDependency(arena, module, "unique_identifier_msgs", true);
-    try linkRosDependency(arena, module, "builtin_interfaces", true);
-    if (ros == .iron) {
-        try linkRosDependency(arena, module, "rosidl_dynamic_typesupport", false);
-        try linkRosDependency(arena, module, "type_description_interfaces", true);
-        try linkRosDependency(arena, module, "service_msgs", true);
-    }
+    try linkRosLibrary(module, typesupport_lib);
+    try linkRosLibrary(module, generator_lib);
+}
+
+fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, _: Ros, _: Rmw) !void {
+    try addRosIncludePath(arena, module, "rcutils");
+    try addRosIncludePath(arena, module, "rmw");
+    try addRosIncludePath(arena, module, "rcl");
+    try addRosIncludePath(arena, module, "rcl_action");
+    try addRosIncludePath(arena, module, "rcl_yaml_param_parser");
+    try addRosIncludePath(arena, module, "rclc");
+
+    try addRosIncludePath(arena, module, "rosidl_runtime_c");
+    try addRosIncludePath(arena, module, "rosidl_typesupport_interface");
+    try addRosIncludePath(arena, module, "builtin_interfaces");
+    try addRosIncludePath(arena, module, "unique_identifier_msgs");
+    try addRosIncludePath(arena, module, "action_msgs");
+
+    try addRosCommonLibraryPaths(arena, module);
+    try linkRosLibrary(module, "rcutils");
+    try linkRosLibrary(module, "rmw");
+    try linkRosLibrary(module, "rmw_cyclonedds_cpp");
+    try linkRosLibrary(module, "rcl");
+    try linkRosLibrary(module, "rclc");
 }
 
 pub fn build(b: *std.Build) !void {
@@ -124,24 +121,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try linkRosDependency(arena, std_msgs, "rosidl_runtime_c", false);
-    try linkRosDependency(arena, std_msgs, "rosidl_typesupport_interface", true);
-    try linkRosDependency(arena, std_msgs, "rosidl_typesupport_c", false);
-    try linkRosDependency(arena, std_msgs, "std_msgs", true);
-    try linkRosDependency(arena, std_msgs, "std_msgs__rosidl_generator_c", false);
-    try linkRosDependency(arena, std_msgs, "std_msgs__rosidl_typesupport_c", false);
+    try addRosMessageLibrary(arena, std_msgs, "std_msgs");
 
     const geometry_msgs = b.addModule("geometry_msgs", .{
         .root_source_file = b.path("src/geometry_msgs/root.zig"),
         .target = target,
         .optimize = optimize,
     });
-    try linkRosDependency(arena, geometry_msgs, "rosidl_runtime_c", false);
-    try linkRosDependency(arena, geometry_msgs, "rosidl_typesupport_interface", true);
-    try linkRosDependency(arena, geometry_msgs, "rosidl_typesupport_c", false);
-    try linkRosDependency(arena, geometry_msgs, "geometry_msgs", true);
-    try linkRosDependency(arena, geometry_msgs, "geometry_msgs__rosidl_generator_c", false);
-    try linkRosDependency(arena, geometry_msgs, "geometry_msgs__rosidl_typesupport_c", false);
+    try addRosMessageLibrary(arena, geometry_msgs, "geometry_msgs");
 
     ////////////////////////////////////////////////////////////////////////////////
 

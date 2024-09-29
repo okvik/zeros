@@ -7,11 +7,6 @@ const Ros = enum {
     rolling,
 };
 
-const Rmw = enum {
-    rmw_fastrtps_cpp,
-    rmw_cyclonedds_cpp,
-};
-
 // Adds the include search path of a given ROS package to the module.
 fn addRosIncludePath(arena: std.mem.Allocator, module: *std.Build.Module, package: []const u8) !void {
     const resource = try resource_index.get(arena, "packages", package, .{ .prefix = true });
@@ -50,7 +45,7 @@ fn addRosMessageLibrary(arena: std.mem.Allocator, module: *std.Build.Module, pac
     try linkRosLibrary(module, generator_lib);
 }
 
-fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, _: Ros, _: Rmw) !void {
+fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, _: Ros) !void {
     try addRosIncludePath(arena, module, "rcutils");
     try addRosIncludePath(arena, module, "rmw");
     try addRosIncludePath(arena, module, "rcl");
@@ -67,7 +62,7 @@ fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, _: Ros, _: Rmw) 
     try addRosCommonLibraryPaths(arena, module);
     try linkRosLibrary(module, "rcutils");
     try linkRosLibrary(module, "rmw");
-    try linkRosLibrary(module, "rmw_cyclonedds_cpp");
+    try linkRosLibrary(module, "rmw_implementation");
     try linkRosLibrary(module, "rcl");
     try linkRosLibrary(module, "rclc");
 }
@@ -81,7 +76,6 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const ros = b.option(Ros, "ros", "ROS 2 distribution") orelse .humble;
-    const rmw = b.option(Rmw, "rmw", "ROS 2 middleware implementation") orelse .rmw_cyclonedds_cpp;
 
     ////////////////////////////////////////////////////////////////////////////////
 
@@ -90,7 +84,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try linkRos(arena, zeros, ros, rmw);
+    try linkRos(arena, zeros, ros);
 
     const zeros_docs = b.addStaticLibrary(.{
         .name = "zeros",
@@ -110,7 +104,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try linkRos(arena, &zeros_tests.root_module, ros, rmw);
+    try linkRos(arena, &zeros_tests.root_module, ros);
 
     const run_zeros_tests = b.addRunArtifact(zeros_tests);
 

@@ -31,6 +31,7 @@ pub fn main() !void {
     msg = try std_msgs.msg.String.init();
     msg.base.data.data = @constCast(msg_buf.ptr);
     msg.base.data.size = msg_buf.len;
+    msg.base.data.capacity = msg_buf.len + 1;
 
     publisher = try zeros.Publisher.init(ralloc, std_msgs.msg.String, &node, "hello", .{});
     defer publisher.deinit();

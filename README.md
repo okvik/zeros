@@ -1,6 +1,6 @@
-# Zeros - Zig Entombment of ROS 2 (WIP)
+# Zeros (WIP)
 
-A very much work in progress of an alternative approach to ROS 2
+A very much work in progress of an alternative ecosystem for ROS 2
 development including a client library, message generation, package
 build support, and so on; for developing simple and efficient robotics
 applications while minimizing contact surface with awful languages,
@@ -14,6 +14,7 @@ A fully-featured (eventually) client library based on `rcl` and `rclc`.
 ### TODO
 
 * Context
+* QoS
 * Subscriptions
 * Publishers
 * Services
@@ -21,23 +22,32 @@ A fully-featured (eventually) client library based on `rcl` and `rclc`.
 * Parameters
 * Timers
 * Executors
+* RMW specifics
 
 ## Message generation
 
 ### TODO
 
-* Everything
+* Decide on external code generator executable vs. comptime.
+  I'm not sure that fully comptime is even possible, given some
+  Zig limitations. It would be especially hard or impossible to
+  provide a nice API for the message types, so codegen is probably
+  the way to go.
+* A Zig message generator integrated into the ROS 2 build pipeline is
+  not something that matches with the goals of this project. As much
+  as practically possible we'd like to operate independent of the
+  standard ROS 2 build environment and only interface with its
+  artifacts as a dumb participant based on system interfaces and
+  established conventions.
 
 ## Build support
 
 ### TODO
 
-* Everything
-* Build time interaction with installed ROS 2 packages as created by ament.
+* Resource index
+* Discovering transitive dependencies
 
 ## Other
-
-* Runtime interaction with installed ROS 2 resources
 
 ## Longer-term ideas
 

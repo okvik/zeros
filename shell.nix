@@ -3,7 +3,7 @@
 pkgs.mkShell {
   name = "zeros";
   packages = (with pkgs; [
-    zigpkgs.master-2024-09-03
+    zigpkgs.master-2024-12-30
     zls
   ]) ++ (with pkgs.rosPackages.humble; [
     (buildEnv {

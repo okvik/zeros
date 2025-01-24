@@ -2,7 +2,7 @@
   description = "zeros - Zig Environment for ROS 2";
 
   inputs = {
-    nix-ros-overlay.url = "github:lopsided98/nix-ros-overlay";
+    nix-ros-overlay.url = "github:lopsided98/nix-ros-overlay?ref=master";
     nixpkgs.follows = "nix-ros-overlay/nixpkgs";
     zig-overlay.url = "github:mitchellh/zig-overlay";
     zls.url = "github:zigtools/zls";

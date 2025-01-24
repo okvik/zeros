@@ -2,8 +2,7 @@ const std = @import("std");
 const resource_index = @import("src/resource_index.zig");
 
 const Ros = enum {
-    humble,
-    iron,
+    jazzy,
     rolling,
 };
 
@@ -37,6 +36,7 @@ fn addRosMessageLibrary(arena: std.mem.Allocator, module: *std.Build.Module, pac
     try addRosIncludePath(arena, module, package);
     try addRosIncludePath(arena, module, "rosidl_runtime_c");
     try addRosIncludePath(arena, module, "rosidl_typesupport_interface");
+    try addRosIncludePath(arena, module, "rcutils");
 
     const typesupport_lib = try std.fmt.allocPrint(arena, "{s}__rosidl_typesupport_c", .{package});
     const generator_lib = try std.fmt.allocPrint(arena, "{s}__rosidl_generator_c", .{package});
@@ -55,7 +55,10 @@ fn linkRos(arena: std.mem.Allocator, module: *std.Build.Module, _: Ros) !void {
 
     try addRosIncludePath(arena, module, "rosidl_runtime_c");
     try addRosIncludePath(arena, module, "rosidl_typesupport_interface");
+    try addRosIncludePath(arena, module, "rosidl_dynamic_typesupport");
+    try addRosIncludePath(arena, module, "type_description_interfaces");
     try addRosIncludePath(arena, module, "builtin_interfaces");
+    try addRosIncludePath(arena, module, "service_msgs");
     try addRosIncludePath(arena, module, "unique_identifier_msgs");
     try addRosIncludePath(arena, module, "action_msgs");
 
@@ -75,7 +78,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const ros = b.option(Ros, "ros", "ROS 2 distribution") orelse .humble;
+    const ros = b.option(Ros, "ros", "ROS 2 distribution") orelse .jazzy;
 
     ////////////////////////////////////////////////////////////////////////////////
 
@@ -104,7 +107,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try linkRos(arena, &zeros_tests.root_module, ros);
+    try linkRos(arena, zeros_tests.root_module, ros);
 
     const run_zeros_tests = b.addRunArtifact(zeros_tests);
 

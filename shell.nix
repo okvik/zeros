@@ -5,7 +5,7 @@ pkgs.mkShell {
   packages = (with pkgs; [
     zigpkgs.master-2024-12-30
     zls
-  ]) ++ (with pkgs.rosPackages.humble; [
+  ]) ++ (with pkgs.rosPackages.jazzy; [
     (buildEnv {
       paths = [
         ros-environment
@@ -25,9 +25,9 @@ pkgs.mkShell {
         rmw-cyclonedds-cpp
         rmw-fastrtps-cpp
 
-        # service-msgs
-        # rosidl-dynamic-typesupport
-        # type-description-interfaces
+        service-msgs
+        rosidl-dynamic-typesupport
+        type-description-interfaces
       ];
     })
   ]);
